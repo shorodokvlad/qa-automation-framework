@@ -8,6 +8,7 @@ sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')
 from api_clients.auth_client import AuthClient
 from api_clients.order_client import OrderClient
 from api_clients.category_client import CategoryClient
+from api_clients.product_client import ProductClient
 from utils.db_connector import DBConnector
 from utils.pyats_health import ContainerNetworkHealthChecker
 
@@ -32,6 +33,11 @@ def order_client():
 def category_client():
     """Fixture providing CategoryClient instance."""
     return CategoryClient()
+
+@pytest.fixture
+def product_client():
+    """Fixture providing ProductClient instance."""
+    return ProductClient()
 
 @pytest.fixture
 def db_connector():
