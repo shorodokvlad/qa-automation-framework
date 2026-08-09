@@ -3,5 +3,13 @@ from .login_page import LoginPage
 from .dashboard_page import DashboardPage
 from .cart_page import CartPage
 from .category_list_page import CategoryListPage
+from .profile_page import ProfilePage
 
-__all__ = ["BasePage", "LoginPage", "DashboardPage", "CartPage", "CategoryListPage"]
+__all__ = [
+    "BasePage",
+    "LoginPage",
+    "DashboardPage",
+    "CartPage",
+    "CategoryListPage",
+    "ProfilePage"
+]
