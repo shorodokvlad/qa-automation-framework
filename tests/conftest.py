@@ -7,6 +7,7 @@ sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')
 
 from api_clients.auth_client import AuthClient
 from api_clients.order_client import OrderClient
+from api_clients.category_client import CategoryClient
 from utils.db_connector import DBConnector
 from utils.pyats_health import ContainerNetworkHealthChecker
 
@@ -17,16 +18,6 @@ def run_network_health_check():
     results = checker.run_pyats_testbed_check()
     yield results
 
-@pytest.fixture(scope="session")
-def browser(playwright):
-    """Override Playwright browser fixture to handle missing browser binaries gracefully."""
-    try:
-        browser = playwright.chromium.launch()
-        yield browser
-        browser.close()
-    except Exception as e:
-        pytest.skip(f"Playwright browser binary launch skipped: {e}")
-
 @pytest.fixture
 def auth_client():
     """Fixture providing AuthClient instance."""
@@ -36,6 +27,11 @@ def auth_client():
 def order_client():
     """Fixture providing OrderClient instance."""
     return OrderClient()
+
+@pytest.fixture
+def category_client():
+    """Fixture providing CategoryClient instance."""
+    return CategoryClient()
 
 @pytest.fixture
 def db_connector():
