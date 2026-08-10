@@ -2,10 +2,15 @@ import os
 import logging
 from typing import List, Dict, Any, Optional
 
+from dotenv import load_dotenv
+
+# Load local development values from .env without overriding CI-provided values.
+load_dotenv()
+
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-class DBConnector:
+class DatabaseConnection:
     """
     Database connector supporting both PostgreSQL (psycopg2) and MySQL (pymysql).
     Used to validate data persistence directly against the database during automated tests.
@@ -21,11 +26,20 @@ class DBConnector:
         password: Optional[str] = None
     ):
         self.db_type = (db_type or os.getenv("DB_TYPE", "postgresql")).lower()
-        self.host = host or os.getenv("DB_HOST", "aws-0-eu-central-1.pooler.supabase.com")
-        self.port = int(port or os.getenv("DB_PORT", "5432" if self.db_type == "postgresql" else "3306"))
-        self.dbname = dbname or os.getenv("DB_NAME", "postgres")
-        self.user = user or os.getenv("DB_USER", "postgres.ztgssqhtytwtxzjdmdyu")
-        self.password = password or os.getenv("DB_PASSWORD", "_7zxTLcY85HJ$F4/")
+        self.host = host or os.getenv("DB_HOST")
+        self.dbname = dbname or os.getenv("DB_NAME")
+        self.user = user or os.getenv("DB_USER")
+        self.password = password or os.getenv("DB_PASSWORD")
+
+        default_port = "5432" if self.db_type == "postgresql" else "3306"
+        self.port = int(port or os.getenv("DB_PORT", default_port))
+
+        if not all([self.host, self.dbname, self.user, self.password]):
+            raise ValueError(
+                "Missing required database connection settings. Set DB_HOST, "
+                "DB_NAME, DB_USER, and DB_PASSWORD in the environment or .env file."
+            )
+
         self.connection = None
 
     def connect(self):
@@ -138,3 +152,7 @@ class DBConnector:
         if self.connection:
             self.connection.close()
             logger.info("Database connection closed.")
+
+
+# Backward-compatible name used by the existing fixtures and tests.
+DBConnector = DatabaseConnection

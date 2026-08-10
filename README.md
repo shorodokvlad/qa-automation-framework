@@ -79,17 +79,13 @@ You need the following installed on your machine:
    playwright install chromium
    ```
 
-4. **Configure Environment Variables (Optional)**
-   The framework provides intelligent defaults for local dev. You can optionally override connection settings via environment variables:
+4. **Configure Environment Variables**
+   Copy the safe example file and replace its placeholders with your local database credentials. The populated `.env` file is ignored by Git and loaded automatically; CI environment variables take precedence.
    ```sh
-   export API_BASE_URL=http://localhost:2424
-   export UI_BASE_URL=http://localhost:3000
-   export DB_HOST=aws-0-eu-central-1.pooler.supabase.com
-   export DB_PORT=5432
-   export DB_NAME=postgres
-   export DB_USER=postgres.ztgssqhtytwtxzjdmdyu
-   export DB_PASSWORD=<your-db-password>
+   cp .env.example .env
    ```
+
+   `DB_HOST`, `DB_NAME`, `DB_USER`, and `DB_PASSWORD` are required. `DB_TYPE` defaults to `postgresql`, and the port defaults to `5432` for PostgreSQL or `3306` for MySQL.
 
 <p align="right">(<a href="#readme-top">back to top</a>)</p>
 
@@ -161,7 +157,7 @@ The framework is fully containerized with Microsoft Playwright Chromium pre-inst
 
 2. **Run tests inside Docker**:
    ```sh
-   docker run --rm qa-automation-framework
+   docker run --rm --env-file .env qa-automation-framework
    ```
 
 ### Jenkins Pipeline

@@ -1,0 +1,11 @@
+.env
+.git
+.github
+.DS_Store
+.pytest_cache
+__pycache__
+*.py[cod]
+venv
+.venv
+report.html
+reports
