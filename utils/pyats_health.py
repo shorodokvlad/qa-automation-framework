@@ -8,6 +8,7 @@ logger = logging.getLogger(__name__)
 # PyATS import try-catch for cross-platform resilience
 PYATS_AVAILABLE = False
 try:
+    # pyrefly: ignore [missing-import]
     from pyats.topology import Testbed, Device
     PYATS_AVAILABLE = True
 except ImportError:

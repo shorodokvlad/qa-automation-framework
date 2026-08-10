@@ -8,7 +8,7 @@ WORKDIR /app
 COPY requirements.txt .
 
 # Install fast Python test dependencies (Chromium browser is pre-baked in base image)
-RUN pip install --no-cache-dir pytest pytest-playwright requests psycopg2-binary pymysql pytest-html python-dotenv
+RUN pip install --no-cache-dir pytest pytest-playwright requests psycopg2-binary pymysql pytest-html python-dotenv locust
 
 # Copy application test code
 COPY . .

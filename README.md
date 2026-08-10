@@ -27,6 +27,7 @@ Key features include:
 * **UI Automation with Playwright (POM)** — Implements the Page Object Model design pattern for the React UI (`LoginPage`, `DashboardPage`). Encapsulates CSS locators and leverages Playwright auto-waiting mechanisms for dynamic DOM node rendering.
 * **REST API Testing & JWT Sessions** — Custom HTTP API clients (`AuthClient`, `OrderClient`) using `requests.Session` that automatically authenticate with the Spring Boot backend, capture JWT Bearer tokens, and execute POST/PUT/GET requests with HTTP status and JSON payload assertions.
 * **Direct Database Validation** — Connects directly to the underlying PostgreSQL (or MySQL) database via `DBConnector` (`psycopg2` / `pymysql`) to run `SELECT` queries and verify physical data persistence (orders, user records) beyond API responses.
+* **API Performance / Load Testing (Locust)** — Uses `locustfile.py` to simulate 100 concurrent users searching products, querying paginated catalogs, and stressing Spring Boot REST API endpoints with realistic task weighting and response latency tracking.
 * **Cisco PyATS Network Health Checks** — Built-in Cisco PyATS testbed script (`utils/pyats_health.py`) that pings container ports (Spring Boot `2424`, React `3000`, DB `5432`) to verify network health before test execution.
 * **Containerized CI/CD Pipeline** — Complete `Dockerfile` (built on Microsoft Playwright base images) and a 5-stage declarative `Jenkinsfile` for automated pipeline execution and HTML report generation.
 
@@ -40,6 +41,7 @@ Key features include:
 * [![Spring Boot][SpringBoot-shield]][SpringBoot-url]
 * [![React][React-shield]][React-url]
 * [![PostgreSQL][PostgreSQL-shield]][PostgreSQL-url]
+* [![Locust][Locust-shield]][Locust-url]
 * [![Docker][Docker-shield]][Docker-url]
 * [![Jenkins][Jenkins-shield]][Jenkins-url]
 
@@ -128,6 +130,21 @@ Open it in your browser to view detailed step durations, stack traces, and test 
 open report.html
 ```
 
+### API Performance / Load Testing (Locust)
+
+Simulate up to 100 concurrent users searching products and hitting Spring Boot REST API endpoints:
+
+* **Launch Interactive Locust Web UI**:
+  ```sh
+  locust -f locustfile.py --host http://localhost:2424
+  ```
+  Open `http://localhost:8089` in your browser to configure user load, spawn rate, and view real-time latency graphs.
+
+* **Run Headless CLI Load Test (100 Concurrent Users)**:
+  ```sh
+  locust -f locustfile.py --headless -u 100 -r 10 --run-time 1m --host http://localhost:2424
+  ```
+
 <p align="right">(<a href="#readme-top">back to top</a>)</p>
 
 <!-- CI/CD & DOCKER -->
@@ -185,3 +202,5 @@ Application Repository: [https://github.com/shorodokvlad/spring-ecommerce-app](h
 [Docker-url]: https://www.docker.com/
 [Jenkins-shield]: https://img.shields.io/badge/Jenkins-D24939?style=for-the-badge&logo=jenkins&logoColor=white
 [Jenkins-url]: https://www.jenkins.io/
+[Locust-shield]: https://img.shields.io/badge/Locust-000000?style=for-the-badge&logo=locust&logoColor=white
+[Locust-url]: https://locust.io/

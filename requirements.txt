@@ -8,3 +8,5 @@ pyats>=24.0; sys_platform != "win32"
 genie>=24.0; sys_platform != "win32"
 pytest-html>=4.1.1
 python-dotenv>=1.0.1
+locust>=2.20.0
+
