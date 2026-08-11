@@ -1,15 +1,12 @@
 import pytest
 import time
 import requests
-import logging
-from playwright.sync_api import Page, Error as PlaywrightError
+from playwright.sync_api import Page, Error as PlaywrightError, expect
 from api_clients.auth_client import AuthClient
 from api_clients.order_client import OrderClient
 from utils.db_connector import DBConnector
 from page_objects.login_page import LoginPage
 from page_objects.dashboard_page import DashboardPage
-
-logger = logging.getLogger(__name__)
 
 @pytest.mark.integration
 class TestOrderIntegrationFlow:
@@ -30,7 +27,7 @@ class TestOrderIntegrationFlow:
         db_connector: DBConnector,
         page: Page
     ):
-        timestamp = int(time.time())
+        timestamp = time.time_ns()
         test_email = f"integration_user_{timestamp}@example.com"
         test_password = "SecurePassword123!"
 
@@ -42,20 +39,20 @@ class TestOrderIntegrationFlow:
                 password=test_password,
                 phone_number="5551234567"
             )
-            assert reg_resp.status_code in [200, 201, 400]
+            assert reg_resp.status_code == 200
+            registration = reg_resp.json()
+            assert registration["status"] == 200
+            assert registration["user"]["email"] == test_email
 
             # 2. Direct DB Validation/Update: Verify email address directly in database
-            try:
-                db_connector.set_user_email_verified(test_email)
-            except Exception as db_err:
-                logger.warning(f"Database email verification update skipped/bypassed: {db_err}")
+            assert db_connector.set_user_email_verified(test_email)
 
             # 3. API: Login User & Obtain JWT Token
             login_resp = auth_client.login_user(email=test_email, password=test_password)
-            if login_resp.status_code != 200:
-                pytest.skip(f"Backend API auth response status: {login_resp.status_code}")
+            assert login_resp.status_code == 200
 
             token = login_resp.json().get("token")
+            assert token
             order_client.set_auth_token(token)
 
             # 4. API: Place an Order
@@ -70,22 +67,22 @@ class TestOrderIntegrationFlow:
                 total_price=order_payload["totalPrice"],
                 items=order_payload["items"]
             )
-            assert order_resp.status_code in [200, 201]
+            assert order_resp.status_code == 200
+            assert order_resp.json()["status"] == 200
 
             # 5. Database Validation: Query DB directly to verify physical data row
-            try:
-                user_record = db_connector.verify_user_exists_by_email(test_email)
-                if user_record:
-                    user_id = user_record["id"]
-                    assert user_record["email"] == test_email
+            user_record = db_connector.verify_user_exists_by_email(test_email)
+            assert user_record is not None
+            assert user_record["email"] == test_email
 
-                    order_items = db_connector.get_order_items_for_user(user_id)
-                    if order_items:
-                        created_item = order_items[0]
-                        assert created_item["quantity"] == 2
-                        assert float(created_item["price"]) == 60.00
-            except Exception as db_err:
-                logger.warning(f"Database direct verification skipped: {db_err}")
+            order_items = db_connector.get_order_items_for_user(user_record["id"])
+            created_item = next(
+                (item for item in order_items if item["product_id"] == product_id),
+                None,
+            )
+            assert created_item is not None
+            assert created_item["quantity"] == 2
+            assert float(created_item["price"]) > 0
 
             # 6. Playwright UI: Verify login & dashboard access
             login_page = LoginPage(page)
@@ -93,9 +90,9 @@ class TestOrderIntegrationFlow:
 
             login_page.load()
             login_page.perform_login(test_email, test_password)
-            page.wait_for_timeout(1000)
 
-            assert dashboard_page.is_user_logged_in() or page.url != login_page.path
+            expect(page).to_have_url(f"{login_page.base_url}/")
+            assert dashboard_page.is_user_logged_in()
 
         except (requests.exceptions.ConnectionError, PlaywrightError) as e:
             pytest.skip(f"Backend or React application offline on localhost: {e}")

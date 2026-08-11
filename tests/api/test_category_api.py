@@ -22,14 +22,15 @@ class TestCategoryAPI:
         """Verify GET /category/get-category-by-id/{id} for valid category."""
         try:
             all_resp = category_client.get_all_categories()
-            if all_resp.status_code == 200:
-                categories = all_resp.json().get("categoryList", [])
-                if categories:
-                    target_id = categories[0]["id"]
-                    response = category_client.get_category_by_id(target_id)
-                    assert response.status_code == 200
-                    data = response.json()
-                    assert data.get("category")["id"] == target_id
+            assert all_resp.status_code == 200
+            categories = all_resp.json()["categoryList"]
+            assert categories, "At least one seeded category is required for this test"
+
+            target_id = categories[0]["id"]
+            response = category_client.get_category_by_id(target_id)
+            assert response.status_code == 200
+            data = response.json()
+            assert data["category"]["id"] == target_id
         except requests.exceptions.ConnectionError:
             pytest.skip("Spring Boot API server is offline on localhost:2424.")
 
@@ -38,6 +39,6 @@ class TestCategoryAPI:
         try:
             category_client.clear_auth_token()
             response = category_client.create_category("Unauthorized Category")
-            assert response.status_code != 200
+            assert response.status_code in (401, 403)
         except requests.exceptions.ConnectionError:
             pytest.skip("Spring Boot API server is offline on localhost:2424.")

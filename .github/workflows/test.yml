@@ -2,45 +2,126 @@ name: QA Automation Test Pipeline
 
 on:
   push:
-    branches: [ main ]
+    branches: [main]
   pull_request:
-    branches: [ main ]
-  workflow_dispatch: # Allows manual trigger from GitHub UI
-  repository_dispatch: # Allows spring-ecommerce-app repo to trigger this pipeline automatically
+    branches: [main]
+  workflow_dispatch:
+  repository_dispatch:
     types: [ecommerce_code_updated]
+
+env:
+  API_BASE_URL: http://localhost:2424
+  UI_BASE_URL: http://localhost:3000
+  DB_TYPE: postgresql
+  DB_HOST: ${{ secrets.DB_HOST }}
+  DB_PORT: "5432"
+  DB_NAME: postgres
+  DB_USER: ${{ secrets.DB_USER }}
+  DB_PASSWORD: ${{ secrets.DB_PASSWORD }}
+  JWT_SECRET: ${{ secrets.JWT_SECRET }}
+  AWS_S3_ACCESS_KEY: ${{ secrets.AWS_S3_ACCESS_KEY }}
+  AWS_S3_SECRET_KEY: ${{ secrets.AWS_S3_SECRET_KEY }}
+  FAIL_ON_SKIPPED: "true"
+  APPLICATION_REF: 6482268f6ef7dc20fa2007633c3573d4a5eb7b0c
 
 jobs:
   test:
-    name: Run Pytest & Playwright Test Suite
+    name: Run application and automation suite
     runs-on: ubuntu-latest
+    timeout-minutes: 30
 
     steps:
-      - name: Checkout QA Automation Framework code
+      - name: Checkout QA automation framework
         uses: actions/checkout@v4
+
+      - name: Checkout pinned application version
+        uses: actions/checkout@v4
+        with:
+          repository: shorodokvlad/spring-ecommerce-app
+          ref: ${{ env.APPLICATION_REF }}
+          path: application
+          persist-credentials: false
 
       - name: Set up Python 3.10
         uses: actions/setup-python@v5
         with:
-          python-version: '3.10'
-          cache: 'pip'
+          python-version: "3.10"
+          cache: pip
 
-      - name: Install Python dependencies
+      - name: Set up Node.js 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: npm
+          cache-dependency-path: application/client/package-lock.json
+
+      - name: Validate required secrets
+        run: |
+          test -n "$DB_HOST"
+          test -n "$DB_USER"
+          test -n "$DB_PASSWORD"
+          test -n "$JWT_SECRET"
+
+      - name: Install automation dependencies
         run: |
           python -m pip install --upgrade pip
           pip install -r requirements.txt
-
-      - name: Install Playwright Chromium & OS dependencies
-        run: |
           playwright install chromium --with-deps
 
-      - name: Run Pytest Automation Suite
+      - name: Build and start Spring Boot backend
         run: |
-          pytest --html=report.html --self-contained-html -v
+          docker build -t "ecommerce-app:${APPLICATION_REF}" application
+          docker run --detach \
+            --name ecommerce-api \
+            --publish 2424:2424 \
+            --env SUPABASE_DB_URL="jdbc:postgresql://${DB_HOST}:${DB_PORT}/${DB_NAME}" \
+            --env SUPABASE_DB_USER="$DB_USER" \
+            --env SUPABASE_DB_PASSWORD="$DB_PASSWORD" \
+            --env JWT_SECRET="$JWT_SECRET" \
+            --env AWS_S3_ACCESS_KEY="$AWS_S3_ACCESS_KEY" \
+            --env AWS_S3_SECRET_KEY="$AWS_S3_SECRET_KEY" \
+            --env FRONTEND_URL="$UI_BASE_URL" \
+            "ecommerce-app:${APPLICATION_REF}"
 
-      - name: Upload Interactive HTML Test Report
+      - name: Install and start React frontend
+        working-directory: application/client
+        run: |
+          npm ci
+          nohup env \
+            BROWSER=none \
+            CI=false \
+            PORT=3000 \
+            REACT_APP_API_URL="$API_BASE_URL" \
+            npm start > "$GITHUB_WORKSPACE/frontend.log" 2>&1 &
+          echo $! > "$GITHUB_WORKSPACE/frontend.pid"
+
+      - name: Wait for application readiness
+        run: python utils/wait_for_services.py
+
+      - name: Run pyATS AEtest network health check
+        run: python utils/pyats_health.py
+
+      - name: Run Pytest automation suite
+        run: pytest --html=report.html --self-contained-html -v
+
+      - name: Capture backend logs
+        if: always()
+        run: docker logs ecommerce-api > backend.log 2>&1 || true
+
+      - name: Upload test evidence
         uses: actions/upload-artifact@v4
         if: always()
         with:
-          name: pytest-html-report
-          path: report.html
+          name: qa-test-evidence
+          path: |
+            report.html
+            backend.log
+            frontend.log
+          if-no-files-found: warn
           retention-days: 14
+
+      - name: Stop application services
+        if: always()
+        run: |
+          docker rm --force ecommerce-api || true
+          if test -f frontend.pid; then kill "$(cat frontend.pid)" || true; fi

@@ -24,11 +24,15 @@ pipeline {
 
         stage('PyATS Container Network Health Check') {
             steps {
-                echo 'Running PyATS health check on container network ports...'
+                echo 'Running pyATS AEtest health checks against the application stack...'
                 sh '''
-                    python3 -m venv venv || true
-                    ./venv/bin/pip install requests || true
-                    ./venv/bin/python utils/pyats_health.py || echo "PyATS health check completed."
+                    docker run --rm \
+                      --add-host=host.docker.internal:host-gateway \
+                      -e API_BASE_URL=${API_BASE_URL} \
+                      -e UI_BASE_URL=${UI_BASE_URL} \
+                      -e DB_HOST \
+                      -e DB_PORT \
+                      ${IMAGE_NAME} python utils/pyats_health.py
                 '''
             }
         }
@@ -39,10 +43,18 @@ pipeline {
                 sh '''
                     docker run --rm \
                       --name qa-runner \
+                      --add-host=host.docker.internal:host-gateway \
                       -e API_BASE_URL=${API_BASE_URL} \
                       -e UI_BASE_URL=${UI_BASE_URL} \
+                      -e DB_TYPE \
+                      -e DB_HOST \
+                      -e DB_PORT \
+                      -e DB_NAME \
+                      -e DB_USER \
+                      -e DB_PASSWORD \
+                      -e FAIL_ON_SKIPPED=true \
                       -v $(pwd)/reports:/app/reports \
-                      ${IMAGE_NAME} pytest --html=reports/report.html --self-contained-html -v || true
+                      ${IMAGE_NAME} pytest --html=reports/report.html --self-contained-html -v
                 '''
             }
         }

@@ -33,13 +33,14 @@ class TestProductAPI:
         """Verify GET /product/get-by-product-id/{id} for existing product."""
         try:
             all_resp = product_client.get_all_products()
-            if all_resp.status_code == 200:
-                products = all_resp.json().get("productList", [])
-                if products:
-                    target_id = products[0]["id"]
-                    response = product_client.get_product_by_id(target_id)
-                    assert response.status_code == 200
-                    data = response.json()
-                    assert data.get("product")["id"] == target_id
+            assert all_resp.status_code == 200
+            products = all_resp.json()["productList"]
+            assert products, "At least one seeded product is required for this test"
+
+            target_id = products[0]["id"]
+            response = product_client.get_product_by_id(target_id)
+            assert response.status_code == 200
+            data = response.json()
+            assert data["product"]["id"] == target_id
         except requests.exceptions.ConnectionError:
             pytest.skip("Spring Boot API server is offline on localhost:2424.")

@@ -169,6 +169,18 @@ The included [`Jenkinsfile`](Jenkinsfile) defines a declarative 5-stage pipeline
 4. **Run Pytest Suite** — Executes Pytest inside the container.
 5. **Publish Report** — Archives `report.html` as a build artifact in Jenkins.
 
+Jenkins must provide `DB_HOST`, `DB_PORT`, `DB_NAME`, `DB_USER`, and `DB_PASSWORD` as protected environment variables. Test and pyATS failures propagate to the build; skipped tests also fail CI.
+
+### GitHub Actions
+
+The GitHub Actions pipeline checks out a pinned revision of the Spring/React application, builds and starts the backend, starts the frontend, waits for both HTTP endpoints, executes the pyATS AEtest network check, and then runs pytest. Configure these repository secrets before enabling the workflow:
+
+* `DB_HOST`, `DB_USER`, and `DB_PASSWORD`
+* `JWT_SECRET`
+* `AWS_S3_ACCESS_KEY` and `AWS_S3_SECRET_KEY` when tests require S3 operations
+
+The PostgreSQL port and database name default to `5432` and `postgres`. Application logs and the HTML test report are uploaded even when a test fails.
+
 <p align="right">(<a href="#readme-top">back to top</a>)</p>
 
 <!-- CONTACT -->
